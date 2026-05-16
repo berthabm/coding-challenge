@@ -1,0 +1,19 @@
+{
+  "success": true,
+  "data": {
+    "stats": {
+      "max": 3,
+      "min": 0,
+      "average": 0.67,
+      "sum": 6,
+      "isDiagonal": true,
+      "dimensions": {
+        "rows": 3,
+        "cols": 3
+      }
+    },
+    "meta": {
+      "source": "api-go"
+    }
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "success": true,
+  "data": {
+    "original": {
+      "rows": 3,
+      "cols": 3
+    },
+    "qr": {
+      "q": [
+        [0.857, -0.394, 0.331],
+        [0.429, 0.902, -0.034],
+        [-0.286, 0.171, 0.943]
+      ],
+      "r": [
+        [14, 21, -2],
+        [0, 175, -35],
+        [0, 0, -98]
+      ]
+    },
+    "stats": {
+      "success": true,
+      "data": {
+        "stats": {
+          "max": 167,
+          "min": -68,
+          "average": 12.44,
+          "sum": 112,
+          "isDiagonal": false,
+          "dimensions": { "rows": 3, "cols": 3 }
+        },
+        "meta": { "source": "api-go" }
+      }
+    }
+  }
+}

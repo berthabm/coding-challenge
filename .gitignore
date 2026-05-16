@@ -1,0 +1,30 @@
+# Dependencies
+api-node/node_modules/
+
+# Environment (never commit secrets)
+api-go/.env
+api-node/.env
+/.env
+
+
+# Build artifacts
+api-go/bin/
+api-go/tmp/
+api-node/dist/
+api-node/coverage/
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Test / coverage
+*.out
+coverage/
+.nyc_output/
+
+# Logs
+*.log
+logs/

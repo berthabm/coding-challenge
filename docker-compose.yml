@@ -1,0 +1,88 @@
+# Orquestación: API Go → API Node (HTTP en red Docker `challenge-net`).
+# Los servicios se resuelven por nombre: api-go usa API2_BASE_URL=http://api-node:3001
+#
+# Opcional: crea un `.env` en la raíz con API_GO_PORT, API_NODE_PORT, etc.;
+# Compose lo usa solo para interpolación (${VAR}), no monta ese archivo dentro de los contenedores.
+
+services:
+  api-node:
+    build:
+      context: ./api-node
+      dockerfile: Dockerfile
+    container_name: interseguros-api-node
+    hostname: api-node
+    ports:
+      - "${API_NODE_PORT:-3001}:3001"
+    environment:
+      APP_NAME: ${API_NODE_APP_NAME:-api-node}
+      NODE_ENV: ${NODE_ENV:-production}
+      APP_HOST: ${API_NODE_APP_HOST:-0.0.0.0}
+      APP_PORT: "3001"
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    healthcheck:
+      test:
+        ["CMD", "curl", "-fsS", "http://127.0.0.1:3001/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - challenge-net
+    restart: unless-stopped
+
+  api-go:
+    build:
+      context: ./api-go
+      dockerfile: Dockerfile
+    container_name: interseguros-api-go
+    ports:
+      - "${API_GO_PORT:-8080}:8080"
+    environment:
+      APP_NAME: ${API_GO_APP_NAME:-api-go}
+      APP_ENV: ${APP_ENV:-production}
+      APP_HOST: ${API_GO_APP_HOST:-0.0.0.0}
+      APP_PORT: "8080"
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      # Comunicación interna entre contenedores (no usar localhost desde api-go)
+      API2_BASE_URL: http://api-node:3001
+      API2_MATRIX_PATH: /api/stats
+      API2_TIMEOUT_SECONDS: ${API2_TIMEOUT_SECONDS:-10}
+      # JWT authentication
+      AUTH_USERNAME: ${AUTH_USERNAME:-admin}
+      AUTH_PASSWORD: ${AUTH_PASSWORD:-admin123}
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      # CORS
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173}
+    depends_on:
+      api-node:
+        condition: service_healthy
+    healthcheck:
+      test:
+        ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - challenge-net
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8080}
+    container_name: interseguros-frontend
+    ports:
+      - "${FRONTEND_PORT:-5173}:80"
+    depends_on:
+      api-go:
+        condition: service_healthy
+    networks:
+      - challenge-net
+    restart: unless-stopped
+
+networks:
+  challenge-net:
+    driver: bridge
