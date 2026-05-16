@@ -3,7 +3,7 @@ import { processMatrix, type QRResponse } from '../api';
 import MatrixTable from '../components/MatrixTable';
 import { formatNumber } from '../utils/format';
 
-const EXAMPLE = '[[1,2,3],[4,5,6],[7,8,9]]';
+const EXAMPLE = '[[1,2,3],[0,1,4],[5,6,0]]';
 
 const MSG_INVALID_JSON =
   'El formato ingresado no es un JSON válido. ' +
@@ -13,6 +13,10 @@ const MSG_INVALID_JSON =
 const MSG_INVALID_MATRIX =
   'La matriz debe contener solo números y todas las filas deben tener ' +
   'la misma cantidad de columnas. Ejemplo válido: [[1,2,3],[4,5,6]]';
+
+const MSG_RANK_DEFICIENT =
+  'La matriz ingresada no es válida para descomposición QR porque sus filas o columnas son ' +
+  'dependientes. Prueba con una matriz de rango completo.';
 
 const MSG_GENERIC =
   'Ocurrió un error al procesar la solicitud. Inténtalo de nuevo.';
@@ -76,6 +80,12 @@ export default function Dashboard({ token, onLogout }: Props) {
           msg === MSG_INVALID_MATRIX
         ) {
           setError(msg);
+        } else if (
+          msg.toLowerCase().includes('rank') ||
+          msg.toLowerCase().includes('rank-deficient') ||
+          msg.toLowerCase().includes('decomposition failed')
+        ) {
+          setError(MSG_RANK_DEFICIENT);
         } else if (
           msg.toLowerCase().includes('invalid') ||
           msg.toLowerCase().includes('payload') ||
