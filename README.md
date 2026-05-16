@@ -724,8 +724,3 @@ curl https://api-go-995881892656.southamerica-east1.run.app/health
 10. **Rate limiting** — Protección ante abuso en endpoints públicos.
 11. **Secret Manager integrado** — Variables sensibles fuera de las env vars planas en Cloud Run.
 
----
-
-## Licencia
-
-Este repositorio se presenta únicamente con fines de evaluación técnica (*coding challenge — Interseguro*).
