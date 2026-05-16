@@ -30,8 +30,7 @@ function parseMatrix(text: string): number[][] {
   let parsed: unknown;
   try {
     parsed = JSON.parse(text.trim());
-  } catch (e) {
-    console.error('[parseMatrix] JSON parse error:', e);
+  } catch {
     throw new Error(MSG_INVALID_JSON);
   }
 
@@ -71,7 +70,7 @@ export default function Dashboard({ token, onLogout }: Props) {
       const data   = await processMatrix(matrix, token);
       setResult(data);
     } catch (err) {
-      console.error('[handleProcess]', err);
+      console.warn('[handleProcess] validation/processing error:', err instanceof Error ? err.message : err);
       if (err instanceof Error) {
         // Messages from parseMatrix are already friendly; API messages need mapping
         const msg = err.message;
