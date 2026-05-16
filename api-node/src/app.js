@@ -10,6 +10,8 @@ import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { matrixRoutes } from './routes/matrixRoutes.js';
 import { statsRoutes } from './routes/statsRoutes.js';
 import { healthRoutes } from './routes/healthRoutes.js';
+import { authRoutes } from './routes/authRoutes.js';
+import { qrProxyRoutes } from './routes/qrProxyRoutes.js';
 import { logger } from './utils/logger.js';
 
 export function createApp() {
@@ -41,6 +43,8 @@ export function createApp() {
   );
 
   app.use('/health', healthRoutes);
+  app.use('/api/auth', authRoutes);
+  app.use('/api/qr', qrProxyRoutes);
   app.use('/api', statsRoutes);
   app.use('/api/v1/matrices', matrixRoutes);
 
