@@ -1,18 +1,17 @@
 import { Router } from 'express';
 import jwt from 'jsonwebtoken';
+import { qrDecompose } from '../services/qrDecompService.js';
+import { computeQRStatistics } from '../services/qrStatsService.js';
 
 export const qrProxyRoutes = Router();
 
 /**
  * POST /api/qr
  *
- * Validates the Bearer JWT, then proxies the request to api-go (API_GO_URL).
- * This allows the frontend to use a single backend URL (api-node) for both
- * auth and matrix processing.
+ * Accepts { matrix: number[][] }, performs QR decomposition (Gram-Schmidt)
+ * and returns statistics over the combined Q and R values.
  *
- * Required env vars:
- *   API_GO_URL   — URL of the api-go service (default: http://localhost:8080)
- *   JWT_SECRET   — same secret used to sign tokens in authController
+ * JWT validation uses the same JWT_SECRET env var as /api/auth/login.
  */
 qrProxyRoutes.post('/', async (req, res, next) => {
   try {
@@ -37,21 +36,56 @@ qrProxyRoutes.post('/', async (req, res, next) => {
       });
     }
 
-    // ── 2. Proxy to api-go ───────────────────────────────────────────────────
-    const apiGoUrl = (process.env.API_GO_URL ?? 'http://localhost:8080').replace(/\/$/, '');
+    // ── 2. Validate matrix input ─────────────────────────────────────────────
+    const { matrix } = req.body ?? {};
 
-    const upstream = await fetch(`${apiGoUrl}/api/qr`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: auth,
-      },
-      body: JSON.stringify(req.body),
-    });
+    if (!Array.isArray(matrix) || matrix.length === 0) {
+      return res.status(422).json({
+        success: false,
+        error: { code: 'INVALID_MATRIX', message: 'matrix must have at least 1 row and 1 column' },
+      });
+    }
 
-    const data = await upstream.json();
-    return res.status(upstream.status).json(data);
+    const colLen = matrix[0].length;
+    if (!Array.isArray(matrix[0]) || colLen === 0) {
+      return res.status(422).json({
+        success: false,
+        error: { code: 'INVALID_MATRIX', message: 'matrix must have at least 1 row and 1 column' },
+      });
+    }
+
+    for (const row of matrix) {
+      if (!Array.isArray(row) || row.length !== colLen) {
+        return res.status(422).json({
+          success: false,
+          error: { code: 'INVALID_MATRIX', message: 'all rows must have the same number of columns' },
+        });
+      }
+      if (row.some((v) => typeof v !== 'number' || !isFinite(v))) {
+        return res.status(422).json({
+          success: false,
+          error: { code: 'INVALID_MATRIX', message: 'matrix values must be finite numbers' },
+        });
+      }
+    }
+
+    // ── 3. QR decomposition ──────────────────────────────────────────────────
+    let q, r;
+    try {
+      ({ q, r } = qrDecompose(matrix));
+    } catch (decompErr) {
+      return res.status(422).json({
+        success: false,
+        error: { code: 'QR_DECOMPOSITION_FAILED', message: decompErr.message },
+      });
+    }
+
+    // ── 4. Statistics over Q and R ───────────────────────────────────────────
+    const statistics = computeQRStatistics(q, r);
+
+    return res.json({ originalMatrix: matrix, qr: { q, r }, statistics });
   } catch (err) {
     next(err);
   }
 });
+
