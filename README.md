@@ -49,44 +49,45 @@ El sistema es **stateless**: sin base de datos, sin colas. Cada petición es un 
 ## 2. Arquitectura
 
 ```
-  Browser
-      │
-      │  POST /api/auth/login   (pública)
-      │  POST /api/qr           (Bearer JWT)
-      ▼
-┌──────────────────────────────────────────────────────┐
-│                  api-node :3001                      │
-│              (Node.js + Express 4)                   │
-│                                                      │
-│  1. CORS middleware (orígenes configurables)         │
-│  2. JWT auth — POST /api/auth/login                  │
-│  3. ValidateMatrix (dimensiones, tipos, filas)       │
-│  4. QR decomposition — Gram-Schmidt modificado       │
-│  5. Estadísticas — max, min, avg, sum, isDiag        │
-│  6. round3() → resultados a 3 decimales              │
-└──────────────────────────────────────────────────────┘
-      │
-      │  (opcional) POST /api/stats  ──────────────►
-      │                                         api-go
-      │                                     (LAPACK QR)
-      ▼
-  Cliente recibe:
-  {
-    "originalMatrix": [[...]],
-    "qr": { "q": [[...]], "r": [[...]] },
-    "statistics": {
-      "max": ..., "min": ..., "average": ..., "sum": ...,
-      "isQDiagonal": false, "isRDiagonal": false
-    }
-  }
+  ┌─────────────────────────────────┐
+  │           Browser               │
+  └────────────────┬────────────────┘
+                   │  interacción del usuario
+                   ▼
+  ┌─────────────────────────────────┐
+  │     Frontend — React + Vite     │
+  │         (nginx, puerto 8080)    │
+  └────────────────┬────────────────┘
+                   │  POST /api/auth/login
+                   │  POST /api/qr  (Bearer JWT)
+                   ▼
+  ┌─────────────────────────────────┐
+  │    api-node — Express.js        │
+  │         (puerto 3001)           │
+  │                                 │
+  │  • Authentication / JWT         │
+  │  • Request validation           │
+  │  • CORS & error handling        │
+  │  • QR orchestration             │
+  │  • Statistics calculation       │
+  └────────────────┬────────────────┘
+                   │  Internal HTTP — POST /api/qr
+                   ▼
+  ┌─────────────────────────────────┐
+  │     api-go — Fiber v2           │
+  │         (puerto 8080)           │
+  │                                 │
+  │  • Matrix validation            │
+  │  • QR decomposition (LAPACK)    │
+  │  • Numerical processing         │
+  └─────────────────────────────────┘
 ```
 
-**Flujo en Cloud Run:**
-- `Browser → api-node` (auth + QR completo)
-- `api-node` procesa todo de forma autónoma — no requiere api-go disponible
-
-**Flujo local con Docker Compose:**
-- `api-node → api-go → api-node/stats` (encadenamiento completo con LAPACK)
+- **Frontend** es la interfaz pública del usuario. Gestiona autenticación, entrada de matrices y visualización de resultados.
+- **api-node** actúa como gateway y orquestador: valida las peticiones, gestiona el ciclo de vida del JWT y calcula estadísticas descriptivas sobre los resultados.
+- **api-go** encapsula el procesamiento matemático especializado: descomposición QR con `gonum/mat` (LAPACK), numéricamente estable y de alta performance.
+- La comunicación entre servicios se realiza mediante **HTTP REST**.
+- En **Cloud Run** cada componente se despliega como un servicio independiente con su propia URL pública.
 
 ---
 
